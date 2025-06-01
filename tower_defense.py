@@ -19,6 +19,8 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GRAY = (128, 128, 128)
+YELLOW = (255, 255, 0)
+ORANGE = (255, 165, 0)
 
 # 游戏类
 class Game:
@@ -34,6 +36,7 @@ class Game:
         self.enemies: List[Enemy] = []
         self.towers: List[Tower] = []
         self.path = self.create_path()
+        self.end_point = self.path[-1]  # 保存终点位置
         self.spawn_timer = 0
         self.spawn_delay = 1500  # Spawn delay 1.5s
         self.last_spawn = pygame.time.get_ticks()
@@ -45,6 +48,7 @@ class Game:
             self.font = pygame.font.SysFont('pingfang', 36)
         else:
             self.font = pygame.font.SysFont(None, 36)
+        self.end_point_animation = 0  # 用于终点动画
 
     def create_path(self) -> List[Tuple[int, int]]:
         # Create a simple path
@@ -66,8 +70,38 @@ class Game:
             self.last_spawn = current_time
 
     def draw_path(self):
+        # Draw the path
         for i in range(len(self.path) - 1):
             pygame.draw.line(self.screen, GRAY, self.path[i], self.path[i + 1], 40)
+        
+        # Draw the end point with animation
+        self.end_point_animation = (self.end_point_animation + 2) % 360
+        radius = 30 + math.sin(math.radians(self.end_point_animation)) * 5
+        
+        # Draw outer glow
+        for r in range(3):
+            pygame.draw.circle(self.screen, ORANGE, 
+                             (int(self.end_point[0]), int(self.end_point[1])), 
+                             int(radius + r * 2), 2)
+        
+        # Draw main circle
+        pygame.draw.circle(self.screen, YELLOW, 
+                         (int(self.end_point[0]), int(self.end_point[1])), 
+                         int(radius))
+        
+        # Draw inner circle
+        pygame.draw.circle(self.screen, ORANGE, 
+                         (int(self.end_point[0]), int(self.end_point[1])), 
+                         int(radius * 0.7))
+        
+        # Draw cross
+        cross_size = radius * 0.4
+        pygame.draw.line(self.screen, RED,
+                        (self.end_point[0] - cross_size, self.end_point[1]),
+                        (self.end_point[0] + cross_size, self.end_point[1]), 3)
+        pygame.draw.line(self.screen, RED,
+                        (self.end_point[0], self.end_point[1] - cross_size),
+                        (self.end_point[0], self.end_point[1] + cross_size), 3)
 
     def draw_ui(self):
         # Show money
@@ -103,6 +137,34 @@ class Game:
 
     def place_tower(self, pos):
         if self.money >= 30:  # Tower cost
+            # 检查是否与现有塔重叠
+            for tower in self.towers:
+                distance = math.sqrt((tower.x - pos[0]) ** 2 + (tower.y - pos[1]) ** 2)
+                if distance < tower.size * 2:  # 如果距离小于两个塔的直径，则视为重叠
+                    return  # 如果重叠，直接返回，不放置新塔
+            
+            # 检查是否在路径上
+            for i in range(len(self.path) - 1):
+                # 计算点到线段的距离
+                x1, y1 = self.path[i]
+                x2, y2 = self.path[i + 1]
+                # 计算线段向量
+                line_vec = (x2 - x1, y2 - y1)
+                # 计算点到线段起点的向量
+                point_vec = (pos[0] - x1, pos[1] - y1)
+                # 计算线段长度的平方
+                line_len_sq = line_vec[0] ** 2 + line_vec[1] ** 2
+                # 计算投影比例
+                t = max(0, min(1, (point_vec[0] * line_vec[0] + point_vec[1] * line_vec[1]) / line_len_sq))
+                # 计算投影点
+                proj_x = x1 + t * line_vec[0]
+                proj_y = y1 + t * line_vec[1]
+                # 计算点到投影点的距离
+                distance = math.sqrt((pos[0] - proj_x) ** 2 + (pos[1] - proj_y) ** 2)
+                if distance < 40:  # 如果距离小于路径宽度的一半，则视为在路径上
+                    return  # 如果在路径上，直接返回，不放置新塔
+            
+            # 如果通过所有检查，则放置新塔
             self.towers.append(Tower(pos[0], pos[1]))
             self.money -= 30
 
