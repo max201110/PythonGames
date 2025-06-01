@@ -10,8 +10,8 @@ class SnakeGame:
         self.root.title("贪吃蛇游戏")
         
         # 游戏常量
-        self.GRID_SIZE = 20
-        self.GRID_COUNT = 20
+        self.GRID_SIZE = 25
+        self.GRID_COUNT = 25
         self.CANVAS_SIZE = self.GRID_SIZE * self.GRID_COUNT
         
         # 游戏状态
@@ -21,7 +21,7 @@ class SnakeGame:
         self.next_direction = 'right'
         self.score = 0
         self.high_score = self.load_high_score()
-        self.game_speed = 150
+        self.game_speed = 300
         self.is_running = False
         
         # 创建界面
@@ -82,7 +82,7 @@ class SnakeGame:
         self.next_direction = 'right'
         self.score = 0
         self.score_label.config(text=f"当前分数: {self.score}")
-        self.game_speed = 150
+        self.game_speed = 300
     
     def generate_food(self):
         while True:
@@ -140,8 +140,8 @@ class SnakeGame:
             self.score_label.config(text=f"当前分数: {self.score}")
             self.generate_food()
             # 加快游戏速度
-            if self.game_speed > 50:
-                self.game_speed -= 5
+            if self.game_speed > 100:
+                self.game_speed -= 10
                 self.root.after_cancel(self.game_loop)
                 self.game_loop = self.root.after(self.game_speed, self.game_step)
         else:
