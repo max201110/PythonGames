@@ -41,7 +41,7 @@ class Tower:
         
         # 设置塔的属性
         if tower_type == TowerType.ARROW:
-            self.damage = 20
+            self.damage = 30
             self.attack_speed = 20  # 调整攻击速度以适应新的更新频率
             self.range = 3
             self.cost = 100
@@ -49,7 +49,7 @@ class Tower:
             self.special = None
             self.description = "基础箭塔"
         elif tower_type == TowerType.CANNON:
-            self.damage = 50
+            self.damage = 75
             self.attack_speed = 30  # 调整攻击速度以适应新的更新频率
             self.range = 2
             self.cost = 200
@@ -57,7 +57,7 @@ class Tower:
             self.special = "splash"
             self.description = "范围炮塔"
         elif tower_type == TowerType.MAGIC:
-            self.damage = 15
+            self.damage = 25
             self.attack_speed = 15  # 调整攻击速度以适应新的更新频率
             self.range = 3
             self.cost = 150
@@ -65,7 +65,7 @@ class Tower:
             self.special = "slow"
             self.description = "减速魔法塔"
         elif tower_type == TowerType.LASER:
-            self.damage = 30
+            self.damage = 45
             self.attack_speed = 25  # 调整攻击速度以适应新的更新频率
             self.range = 4
             self.cost = 250
@@ -73,7 +73,7 @@ class Tower:
             self.special = "pierce"
             self.description = "穿透激光塔"
         elif tower_type == TowerType.ICE:
-            self.damage = 10
+            self.damage = 15
             self.attack_speed = 27  # 调整攻击速度以适应新的更新频率
             self.range = 3
             self.cost = 175
@@ -81,7 +81,7 @@ class Tower:
             self.special = "freeze"
             self.description = "冰冻塔"
         elif tower_type == TowerType.POISON:
-            self.damage = 5
+            self.damage = 8
             self.attack_speed = 20  # 调整攻击速度以适应新的更新频率
             self.range = 3
             self.cost = 225
@@ -89,7 +89,7 @@ class Tower:
             self.special = "poison"
             self.description = "毒塔"
         elif tower_type == TowerType.SNIPER:
-            self.damage = 200
+            self.damage = 300
             self.attack_speed = 40  # 调整攻击速度以适应新的更新频率
             self.range = 5
             self.cost = 300
@@ -118,7 +118,7 @@ class Tower:
         return f"攻击力: {self.damage}\n攻速: {self.attack_speed}\n范围: {self.range}"
 
 class Enemy:
-    def __init__(self, enemy_type, path):
+    def __init__(self, enemy_type, path, wave_number):
         self.type = enemy_type
         self.path = path
         self.path_index = 0
@@ -135,56 +135,57 @@ class Enemy:
         self.poison_duration = 0
         self.heal_cooldown = 0
         
-        # 设置敌人属性
+        # 计算波次难度系数
+        self.wave_multiplier = 1 + (wave_number - 1) * 0.15  # 每波增加15%的属性
+        
+        # 设置敌人基础属性
         if enemy_type == EnemyType.NORMAL:
-            self.max_health = 80
-            self.health = 80
-            self.speed = 0.01  # 调整速度以适应新的更新频率
-            self.reward = 10
+            base_health = 120
+            base_speed = 0.015
+            base_reward = 15
             self.color = '#95a5a6'
         elif enemy_type == EnemyType.FAST:
-            self.max_health = 40
-            self.health = 40
-            self.speed = 0.016  # 调整速度以适应新的更新频率
-            self.reward = 15
+            base_health = 60
+            base_speed = 0.024
+            base_reward = 20
             self.color = '#2ecc71'
         elif enemy_type == EnemyType.TANK:
-            self.max_health = 200
-            self.health = 200
-            self.speed = 0.006  # 调整速度以适应新的更新频率
-            self.reward = 20
+            base_health = 300
+            base_speed = 0.009
+            base_reward = 30
             self.color = '#e67e22'
         elif enemy_type == EnemyType.BOSS:
-            self.max_health = 600
-            self.health = 600
-            self.speed = 0.008  # 调整速度以适应新的更新频率
-            self.reward = 50
+            base_health = 900
+            base_speed = 0.012
+            base_reward = 75
             self.color = '#c0392b'
         elif enemy_type == EnemyType.FLYING:
-            self.max_health = 60
-            self.health = 60
-            self.speed = 0.014  # 调整速度以适应新的更新频率
-            self.reward = 25
+            base_health = 90
+            base_speed = 0.021
+            base_reward = 35
             self.color = '#9b59b6'
         elif enemy_type == EnemyType.STEALTH:
-            self.max_health = 50
-            self.health = 50
-            self.speed = 0.016  # 调整速度以适应新的更新频率
-            self.reward = 30
+            base_health = 75
+            base_speed = 0.024
+            base_reward = 40
             self.color = '#34495e'
             self.stealth = True
         elif enemy_type == EnemyType.HEALER:
-            self.max_health = 50
-            self.health = 50
-            self.speed = 0.008  # 调整速度以适应新的更新频率
-            self.reward = 35
+            base_health = 75
+            base_speed = 0.012
+            base_reward = 45
             self.color = '#1abc9c'
         else:  # SWARM
-            self.max_health = 20
-            self.health = 20
-            self.speed = 0.02  # 调整速度以适应新的更新频率
-            self.reward = 5
+            base_health = 30
+            base_speed = 0.03
+            base_reward = 8
             self.color = '#e74c3c'
+        
+        # 应用波次难度系数
+        self.max_health = int(base_health * self.wave_multiplier)
+        self.health = self.max_health
+        self.speed = base_speed * (1 + (wave_number - 1) * 0.05)  # 速度每波增加5%
+        self.reward = int(base_reward * self.wave_multiplier)
 
 class TowerDefense:
     def __init__(self, root):
@@ -208,13 +209,13 @@ class TowerDefense:
         self.score = 0
         self.is_running = False
         self.selected_tower = None
-        self.game_speed = 50  # 提高游戏更新频率到50毫秒
+        self.game_speed = 30  # 进一步提高游戏更新频率到30毫秒
         self.wave_timer = 0
-        self.wave_interval = 600  # 波次间隔（游戏帧数）
+        self.wave_interval = 400  # 减少波次间隔到400帧（约12秒）
         self.enemy_spawn_timer = 0
-        self.enemy_spawn_interval = 60  # 敌人生成间隔（游戏帧数）
-        self.current_wave_enemies = 0  # 当前波次已生成的敌人数量
-        self.wave_enemies_count = 0  # 当前波次需要生成的敌人总数
+        self.enemy_spawn_interval = 30  # 减少敌人生成间隔到30帧（约0.9秒）
+        self.current_wave_enemies = 0
+        self.wave_enemies_count = 0
         
         # 创建路径
         self.path = self.create_path()
@@ -661,17 +662,17 @@ class TowerDefense:
         
         # 根据波数设置敌人数量和类型
         if self.current_wave <= 5:
-            self.wave_enemies_count = 3 + self.current_wave
+            self.wave_enemies_count = 4 + self.current_wave
             self.enemy_types = [EnemyType.NORMAL]
         elif self.current_wave <= 10:
-            self.wave_enemies_count = 2 + self.current_wave
+            self.wave_enemies_count = 3 + self.current_wave
             self.enemy_types = [EnemyType.NORMAL, EnemyType.FAST, EnemyType.FLYING]
         elif self.current_wave <= 15:
-            self.wave_enemies_count = 1 + self.current_wave
+            self.wave_enemies_count = 2 + self.current_wave
             self.enemy_types = [EnemyType.NORMAL, EnemyType.FAST, EnemyType.FLYING, 
                               EnemyType.TANK, EnemyType.STEALTH]
         elif self.current_wave <= 20:
-            self.wave_enemies_count = self.current_wave
+            self.wave_enemies_count = 1 + self.current_wave
             self.enemy_types = [EnemyType.NORMAL, EnemyType.FAST, EnemyType.FLYING,
                               EnemyType.TANK, EnemyType.STEALTH, EnemyType.HEALER]
         else:
@@ -680,6 +681,7 @@ class TowerDefense:
         
         self.current_wave_enemies = 0
         print(f"开始第{self.current_wave}波，将生成{self.wave_enemies_count}个敌人")
+        print(f"当前波次难度系数：{1 + (self.current_wave - 1) * 0.15:.2f}")
     
     def spawn_enemy(self):
         if self.current_wave_enemies < self.wave_enemies_count:
@@ -689,8 +691,8 @@ class TowerDefense:
             else:
                 enemy_type = random.choice(self.enemy_types)
             
-            # 创建敌人
-            enemy = Enemy(enemy_type, self.path)
+            # 创建敌人，传入当前波数
+            enemy = Enemy(enemy_type, self.path, self.current_wave)
             enemy.x = self.path[0][0]
             enemy.y = self.path[0][1]
             # 添加随机偏移
@@ -702,7 +704,7 @@ class TowerDefense:
             # 如果是治疗者，额外生成集群敌人
             if enemy_type == EnemyType.HEALER:
                 for _ in range(2):
-                    swarm = Enemy(EnemyType.SWARM, self.path)
+                    swarm = Enemy(EnemyType.SWARM, self.path, self.current_wave)
                     swarm.x = self.path[0][0]
                     swarm.y = self.path[0][1]
                     swarm.x += random.uniform(-0.1, 0.1)
