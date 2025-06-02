@@ -135,57 +135,58 @@ class Enemy:
         self.poison_duration = 0
         self.heal_cooldown = 0
         
-        # 计算波次难度系数
-        self.wave_multiplier = 1 + (wave_number - 1) * 0.15  # 每波增加15%的属性
+        # 大幅提高波次难度系数
+        self.health_multiplier = 1 + (wave_number - 1) * 0.8  # 每波增加80%的血量
+        self.speed_multiplier = 1 + (wave_number - 1) * 0.08  # 每波增加8%的速度
         
         # 设置敌人基础属性
         if enemy_type == EnemyType.NORMAL:
-            base_health = 120
+            base_health = 150  # 增加基础血量
             base_speed = 0.015
-            base_reward = 15
+            base_reward = 20
             self.color = '#95a5a6'
         elif enemy_type == EnemyType.FAST:
-            base_health = 60
+            base_health = 80
             base_speed = 0.024
-            base_reward = 20
+            base_reward = 25
             self.color = '#2ecc71'
         elif enemy_type == EnemyType.TANK:
-            base_health = 300
+            base_health = 400  # 增加坦克血量
             base_speed = 0.009
-            base_reward = 30
+            base_reward = 40
             self.color = '#e67e22'
         elif enemy_type == EnemyType.BOSS:
-            base_health = 900
+            base_health = 1200  # 增加Boss血量
             base_speed = 0.012
-            base_reward = 75
+            base_reward = 100
             self.color = '#c0392b'
         elif enemy_type == EnemyType.FLYING:
-            base_health = 90
+            base_health = 120
             base_speed = 0.021
-            base_reward = 35
+            base_reward = 45
             self.color = '#9b59b6'
         elif enemy_type == EnemyType.STEALTH:
-            base_health = 75
+            base_health = 100
             base_speed = 0.024
-            base_reward = 40
+            base_reward = 50
             self.color = '#34495e'
             self.stealth = True
         elif enemy_type == EnemyType.HEALER:
-            base_health = 75
+            base_health = 100
             base_speed = 0.012
-            base_reward = 45
+            base_reward = 60
             self.color = '#1abc9c'
         else:  # SWARM
-            base_health = 30
+            base_health = 40
             base_speed = 0.03
-            base_reward = 8
+            base_reward = 10
             self.color = '#e74c3c'
         
         # 应用波次难度系数
-        self.max_health = int(base_health * self.wave_multiplier)
+        self.max_health = int(base_health * self.health_multiplier)
         self.health = self.max_health
-        self.speed = base_speed * (1 + (wave_number - 1) * 0.05)  # 速度每波增加5%
-        self.reward = int(base_reward * self.wave_multiplier)
+        self.speed = base_speed * self.speed_multiplier
+        self.reward = int(base_reward * self.health_multiplier)
 
 class TowerDefense:
     def __init__(self, root):
@@ -211,9 +212,9 @@ class TowerDefense:
         self.selected_tower = None
         self.game_speed = 30  # 进一步提高游戏更新频率到30毫秒
         self.wave_timer = 0
-        self.wave_interval = 400  # 减少波次间隔到400帧（约12秒）
+        self.wave_interval = 300  # 减少波次间隔到400帧（约12秒）
         self.enemy_spawn_timer = 0
-        self.enemy_spawn_interval = 30  # 减少敌人生成间隔到30帧（约0.9秒）
+        self.enemy_spawn_interval = 20  # 减少敌人生成间隔到30帧（约0.9秒）
         self.current_wave_enemies = 0
         self.wave_enemies_count = 0
         
@@ -662,17 +663,17 @@ class TowerDefense:
         
         # 根据波数设置敌人数量和类型
         if self.current_wave <= 5:
-            self.wave_enemies_count = 4 + self.current_wave
+            self.wave_enemies_count = 6 + self.current_wave  # 增加初始波次的敌人数量
             self.enemy_types = [EnemyType.NORMAL]
         elif self.current_wave <= 10:
-            self.wave_enemies_count = 3 + self.current_wave
+            self.wave_enemies_count = 5 + self.current_wave  # 增加中期波次的敌人数量
             self.enemy_types = [EnemyType.NORMAL, EnemyType.FAST, EnemyType.FLYING]
         elif self.current_wave <= 15:
-            self.wave_enemies_count = 2 + self.current_wave
+            self.wave_enemies_count = 4 + self.current_wave  # 增加后期波次的敌人数量
             self.enemy_types = [EnemyType.NORMAL, EnemyType.FAST, EnemyType.FLYING, 
                               EnemyType.TANK, EnemyType.STEALTH]
         elif self.current_wave <= 20:
-            self.wave_enemies_count = 1 + self.current_wave
+            self.wave_enemies_count = 3 + self.current_wave  # 增加最终波次的敌人数量
             self.enemy_types = [EnemyType.NORMAL, EnemyType.FAST, EnemyType.FLYING,
                               EnemyType.TANK, EnemyType.STEALTH, EnemyType.HEALER]
         else:
@@ -681,12 +682,12 @@ class TowerDefense:
         
         self.current_wave_enemies = 0
         print(f"开始第{self.current_wave}波，将生成{self.wave_enemies_count}个敌人")
-        print(f"当前波次难度系数：{1 + (self.current_wave - 1) * 0.15:.2f}")
+        print(f"当前波次血量系数：{1 + (self.current_wave - 1) * 0.8:.2f}")
     
     def spawn_enemy(self):
         if self.current_wave_enemies < self.wave_enemies_count:
             # 选择敌人类型
-            if self.current_wave > 20 and random.random() < 0.15:
+            if self.current_wave > 10 and random.random() < 0.35:  # 提高Boss出现概率并提前出现
                 enemy_type = EnemyType.BOSS
             else:
                 enemy_type = random.choice(self.enemy_types)
@@ -703,7 +704,7 @@ class TowerDefense:
             
             # 如果是治疗者，额外生成集群敌人
             if enemy_type == EnemyType.HEALER:
-                for _ in range(2):
+                for _ in range(4):  # 增加治疗者携带的集群敌人数量
                     swarm = Enemy(EnemyType.SWARM, self.path, self.current_wave)
                     swarm.x = self.path[0][0]
                     swarm.y = self.path[0][1]
