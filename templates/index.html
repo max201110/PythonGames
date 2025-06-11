@@ -1,0 +1,496 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔防游戏</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            color: #ffffff;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: #ffd700;
+        }
+        .game-container {
+            position: relative;
+            margin: 20px auto;
+        }
+        canvas {
+            border: 2px solid #ffd700;
+            background: #1a1a1a;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .tower-button {
+            background: #ffd700;
+            color: #000000;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .tower-button:hover {
+            transform: scale(1.05);
+            background: #ffed4a;
+        }
+        .tower-button.selected {
+            background: #ffed4a;
+            transform: scale(1.05);
+        }
+        .game-info {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 1.2rem;
+        }
+        .instructions {
+            margin-top: 2rem;
+            text-align: left;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>塔防游戏</h1>
+        <div class="game-container">
+            <canvas id="gameCanvas" width="1050" height="540"></canvas>
+        </div>
+        <div class="controls">
+            <button class="tower-button" data-tower="ARROW">箭塔 (100)</button>
+            <button class="tower-button" data-tower="CANNON">炮塔 (200)</button>
+            <button class="tower-button" data-tower="MAGIC">魔法塔 (150)</button>
+            <button class="tower-button" data-tower="LASER">激光塔 (250)</button>
+            <button class="tower-button" data-tower="ICE">冰塔 (175)</button>
+            <button class="tower-button" data-tower="POISON">毒塔 (225)</button>
+            <button class="tower-button" data-tower="SNIPER">狙击塔 (300)</button>
+            <button class="tower-button" data-tower="SUPPORT">支援塔 (275)</button>
+        </div>
+        <div class="game-info">
+            <div>生命值: <span id="lives">30</span></div>
+            <div>金钱: <span id="money">300</span></div>
+            <div>分数: <span id="score">0</span></div>
+            <div>波数: <span id="wave">0</span></div>
+        </div>
+        <div class="instructions">
+            <h3>游戏说明：</h3>
+            <p>1. 点击塔按钮选择要建造的塔</p>
+            <p>2. 点击地图上的空地放置塔</p>
+            <p>3. 阻止敌人到达终点</p>
+            <p>4. 合理使用不同类型的防御塔来获得胜利</p>
+        </div>
+    </div>
+
+    <script>
+        // 游戏常量
+        const GRID_SIZE = 30;
+        const GRID_WIDTH = 35;
+        const GRID_HEIGHT = 18;
+        const CANVAS_WIDTH = GRID_WIDTH * GRID_SIZE;
+        const CANVAS_HEIGHT = GRID_HEIGHT * GRID_SIZE;
+
+        // 游戏状态
+        let gameState = {
+            towers: [],
+            enemies: [],
+            current_wave: 0,
+            lives: 30,
+            money: 300,
+            score: 0,
+            is_running: false,
+            selected_tower: null,
+            wave_timer: 0,
+            wave_interval: 200,
+            enemy_spawn_timer: 0,
+            enemy_spawn_interval: 12,
+            current_wave_enemies: 0,
+            wave_enemies_count: 0
+        };
+
+        // 获取Canvas上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 加载图片资源
+        const towerImages = {};
+        const enemyImages = {};
+        const imageTypes = {
+            'ARROW': '#3498db',
+            'CANNON': '#e74c3c',
+            'MAGIC': '#9b59b6',
+            'LASER': '#f1c40f',
+            'ICE': '#00bfff',
+            'POISON': '#32cd32',
+            'SNIPER': '#8b4513',
+            'SUPPORT': '#ffd700'
+        };
+
+        // 初始化游戏
+        function initGame() {
+            // 加载图片资源
+            loadImages();
+            
+            // 绑定事件监听器
+            bindEvents();
+            
+            // 开始游戏循环
+            gameLoop();
+        }
+
+        // 加载图片资源
+        function loadImages() {
+            // 这里可以加载实际的图片资源
+            // 暂时使用颜色块代替
+            Object.entries(imageTypes).forEach(([type, color]) => {
+                towerImages[type] = createTowerImage(color);
+            });
+        }
+
+        // 创建塔的图片
+        function createTowerImage(color) {
+            const img = document.createElement('canvas');
+            img.width = GRID_SIZE;
+            img.height = GRID_SIZE;
+            const imgCtx = img.getContext('2d');
+            
+            // 绘制塔的形状
+            imgCtx.fillStyle = color;
+            imgCtx.beginPath();
+            imgCtx.arc(GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE/3, 0, Math.PI * 2);
+            imgCtx.fill();
+            
+            return img;
+        }
+
+        // 绑定事件监听器
+        function bindEvents() {
+            // 塔按钮点击事件
+            document.querySelectorAll('.tower-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const towerType = button.dataset.tower;
+                    selectTower(towerType);
+                });
+            });
+
+            // 画布点击事件
+            canvas.addEventListener('click', (event) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((event.clientX - rect.left) / GRID_SIZE);
+                const y = Math.floor((event.clientY - rect.top) / GRID_SIZE);
+                placeTower(x, y);
+            });
+        }
+
+        // 选择塔
+        function selectTower(towerType) {
+            gameState.selected_tower = towerType;
+            document.querySelectorAll('.tower-button').forEach(button => {
+                button.classList.toggle('selected', button.dataset.tower === towerType);
+            });
+        }
+
+        // 放置塔
+        function placeTower(x, y) {
+            if (!gameState.is_running || !gameState.selected_tower) return;
+
+            fetch('/place_tower', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: gameState.selected_tower,
+                    x: x,
+                    y: y
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateGameState();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        // 更新游戏状态
+        function updateGameState() {
+            fetch('/update_game', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    console.error(data.message);
+                    return;
+                }
+                gameState = data;
+                updateUI();
+            })
+            .catch(error => {
+                console.error('Error updating game state:', error);
+            });
+        }
+
+        // 更新UI显示
+        function updateUI() {
+            document.getElementById('lives').textContent = gameState.lives;
+            document.getElementById('money').textContent = gameState.money;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('wave').textContent = gameState.current_wave;
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            // 清空画布
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // 绘制游戏元素
+            drawGrid();
+            drawPaths();
+            drawTowers();
+            drawEnemies();
+            
+            // 更新游戏状态
+            if (gameState.is_running) {
+                updateGameState();
+            }
+            
+            // 继续游戏循环
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 绘制网格
+        function drawGrid() {
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    ctx.strokeRect(
+                        x * GRID_SIZE,
+                        y * GRID_SIZE,
+                        GRID_SIZE,
+                        GRID_SIZE
+                    );
+                }
+            }
+        }
+
+        // 绘制路径
+        function drawPaths() {
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 3;
+            
+            // 获取路径数据
+            const paths = getPaths();
+            
+            paths.forEach(path => {
+                for (let i = 0; i < path.length - 1; i++) {
+                    const [x1, y1] = path[i];
+                    const [x2, y2] = path[i + 1];
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x1 * GRID_SIZE + GRID_SIZE/2,
+                        y1 * GRID_SIZE + GRID_SIZE/2
+                    );
+                    ctx.lineTo(
+                        x2 * GRID_SIZE + GRID_SIZE/2,
+                        y2 * GRID_SIZE + GRID_SIZE/2
+                    );
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // 获取路径数据
+        function getPaths() {
+            // 这里应该从服务器获取路径数据
+            // 暂时使用示例路径
+            return [
+                [(0, 4), (1, 4), (2, 4), (3, 4), (4, 4)],
+                [(0, 12), (1, 12), (2, 12), (3, 12), (4, 12)]
+            ];
+        }
+
+        // 绘制塔
+        function drawTowers() {
+            gameState.towers.forEach(tower => {
+                const x = tower.x * GRID_SIZE + GRID_SIZE/2;
+                const y = tower.y * GRID_SIZE + GRID_SIZE/2;
+                
+                // 绘制塔的图片
+                ctx.drawImage(
+                    towerImages[tower.type],
+                    tower.x * GRID_SIZE,
+                    tower.y * GRID_SIZE
+                );
+                
+                // 绘制塔等级
+                if (tower.level > 1) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(
+                        tower.level.toString(),
+                        x,
+                        y + 15
+                    );
+                }
+                
+                // 绘制攻击范围（当有目标时）
+                if (tower.target) {
+                    ctx.strokeStyle = towerImages[tower.type].color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(
+                        x,
+                        y,
+                        tower.range * GRID_SIZE,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.stroke();
+                    
+                    // 绘制攻击轨迹
+                    if (tower.target) {
+                        ctx.strokeStyle = towerImages[tower.type].color;
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(
+                            tower.target.x * GRID_SIZE + GRID_SIZE/2,
+                            tower.target.y * GRID_SIZE + GRID_SIZE/2
+                        );
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+            });
+        }
+
+        // 绘制敌人
+        function drawEnemies() {
+            gameState.enemies.forEach(enemy => {
+                const x = enemy.x * GRID_SIZE + GRID_SIZE/2;
+                const y = enemy.y * GRID_SIZE + GRID_SIZE/2;
+                
+                // 绘制敌人
+                if (enemy.stealth) {
+                    // 隐身敌人半透明
+                    ctx.globalAlpha = 0.5;
+                }
+                
+                ctx.fillStyle = getEnemyColor(enemy.type);
+                ctx.beginPath();
+                ctx.arc(x, y, GRID_SIZE/3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 恢复透明度
+                ctx.globalAlpha = 1.0;
+                
+                // 绘制血条背景
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(
+                    x - 15,
+                    y - 20,
+                    30,
+                    5
+                );
+                
+                // 绘制血条
+                const healthRatio = enemy.health / enemy.max_health;
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(
+                    x - 15,
+                    y - 20,
+                    30 * healthRatio,
+                    5
+                );
+                
+                // 绘制特殊状态效果
+                if (enemy.frozen) {
+                    ctx.strokeStyle = '#00bfff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(x, y, GRID_SIZE/3 + 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                if (enemy.poisoned) {
+                    ctx.strokeStyle = '#32cd32';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(x, y, GRID_SIZE/3 + 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // 获取敌人颜色
+        function getEnemyColor(type) {
+            const colors = {
+                'NORMAL': '#95a5a6',
+                'FAST': '#2ecc71',
+                'TANK': '#e67e22',
+                'BOSS': '#c0392b',
+                'FLYING': '#9b59b6',
+                'STEALTH': '#34495e',
+                'HEALER': '#1abc9c',
+                'SWARM': '#e74c3c'
+            };
+            return colors[type] || '#95a5a6';
+        }
+
+        // 开始游戏
+        function startGame() {
+            fetch('/start_game')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        gameState.is_running = true;
+                        updateGameState();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
+        
