@@ -1,19 +1,57 @@
-# 简易塔防游戏
+# Python Tower Defense Game
 
-这是一个使用 Python 和 Pygame 开发的简易塔防游戏。
+一个使用 Python 和 Tkinter 开发的塔防游戏。
 
-## 安装依赖
+## 环境要求
 
+- Python 3.13.4 或更高版本
+- Pillow (PIL) 库
+
+### 关于 Pillow
+
+Pillow 是 Python 图像处理库（Python Imaging Library，PIL）的一个分支，它提供了强大的图像处理功能：
+
+- 图像打开、保存和转换
+- 图像绘制和编辑
+- 图像滤镜和特效
+- 支持多种图像格式（PNG, JPEG, GIF, BMP 等）
+
+在本游戏中，Pillow 主要用于：
+- 加载和显示游戏图像资源
+- 处理游戏界面的图像渲染
+- 实现图像特效和动画
+
+## 安装步骤
+
+1. 克隆项目到本地：
+```bash
+git clone https://github.com/yourusername/pythonGames.git
+cd pythonGames
+```
+
+2. 创建并激活虚拟环境：
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
+3. 安装依赖：
+```bash
+pip install Pillow
+```
+
 ## 运行游戏
 
+在项目目录下运行：
 ```bash
-python tower_defense.py
+python3 tower_defense.py
 ```
+
+## 注意事项
+
+- 确保使用 Python 3.13.4 或更高版本
+- 如果遇到 "No module named 'PIL'" 错误，请确保已安装 Pillow 库
+- 游戏运行时可能会显示一些 IMK 相关的日志信息，这是正常的
 
 ## 游戏说明
 
